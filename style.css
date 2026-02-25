@@ -14,7 +14,6 @@ h1 {
   display: grid;
   grid-template-columns: repeat(8, 60px);
   grid-template-rows: repeat(8, 60px);
-  gap: 0;
   border: 2px solid #333;
 }
 
@@ -25,7 +24,8 @@ h1 {
   justify-content: center;
   align-items: center;
   font-size: 48px;
-  cursor: grab;
+  cursor: pointer;
+  user-select: none;
 }
 
 .square.white {
@@ -34,6 +34,10 @@ h1 {
 
 .square.black {
   background-color: #b58863;
+}
+
+.square.selected {
+  background-color: yellow !important;
 }
 
 #gameInfo {
