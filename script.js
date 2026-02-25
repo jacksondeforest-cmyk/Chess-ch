@@ -1,35 +1,67 @@
 const boardEl = document.getElementById('board');
 const historyEl = document.getElementById('history');
 const fenEl = document.getElementById('fen');
+const resetBtn = document.getElementById('resetBtn');
 
 const game = new Chess();
 
-const board = Chessboard('board', {
-  draggable: true,
-  position: 'start',
-  onDragStart: (source, piece, position, orientation) => {
-    if (game.game_over()) return false;
-    if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-        (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-      return false;
+const pieceSymbols = {
+  'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
+  'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
+};
+
+function createBoard() {
+  boardEl.innerHTML = '';
+  const boardSquares = game.board();
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const square = document.createElement('div');
+      square.classList.add('square');
+      square.classList.add((r + c) % 2 === 0 ? 'white' : 'black');
+      square.dataset.rank = r;
+      square.dataset.file = c;
+
+      const piece = boardSquares[r][c];
+      if (piece) square.textContent = pieceSymbols[piece.color === 'w' ? piece.type.toUpperCase() : piece.type];
+
+      square.addEventListener('click', handleClick);
+      boardEl.appendChild(square);
     }
-  },
-  onDrop: (source, target) => {
-    const move = game.move({
-      from: source,
-      to: target,
-      promotion: 'q'
-    });
+  }
+}
 
-    if (move === null) return 'snapback';
-    updateBoard();
-    window.setTimeout(makeAIMove, 300);
-  },
-  onSnapEnd: () => board.position(game.fen())
-});
+let selectedSquare = null;
 
-function updateBoard() {
-  board.position(game.fen());
+function handleClick(e) {
+  const r = parseInt(e.currentTarget.dataset.rank);
+  const c = parseInt(e.currentTarget.dataset.file);
+  const squareName = String.fromCharCode(97 + c) + (8 - r);
+
+  if (selectedSquare) {
+    // Try move
+    const move = game.move({ from: selectedSquare, to: squareName, promotion: 'q' });
+    if (move) {
+      selectedSquare = null;
+      createBoard();
+      updateInfo();
+      setTimeout(makeAIMove, 300);
+      return;
+    } else {
+      selectedSquare = null;
+      createBoard();
+      return;
+    }
+  }
+
+  // Select square
+  const piece = game.get(squareName);
+  if (piece && piece.color === game.turn()) {
+    selectedSquare = squareName;
+    e.currentTarget.style.backgroundColor = 'yellow';
+  }
+}
+
+function updateInfo() {
   fenEl.textContent = game.fen();
   historyEl.innerHTML = '';
   game.history().forEach(m => {
@@ -39,19 +71,26 @@ function updateBoard() {
   });
 }
 
-// Simple 800 ELO AI move
 function makeAIMove() {
-  const moves = game.moves();
-  if (moves.length === 0) return;
+  if (game.game_over()) return;
 
-  // Pick a move randomly with some "800-elo" mistakes
+  const moves = game.moves();
   let move;
   do {
-    const candidate = moves[Math.floor(Math.random() * moves.length)];
-    move = candidate;
-    // simulate occasional bad moves
-  } while (Math.random() < 0.3 && moves.length > 1);
+    move = moves[Math.floor(Math.random() * moves.length)];
+  } while (Math.random() < 0.3 && moves.length > 1); // simulate 800 ELO mistakes
 
   game.move(move);
-  updateBoard();
+  createBoard();
+  updateInfo();
 }
+
+// Reset button
+resetBtn.addEventListener('click', () => {
+  game.reset();
+  createBoard();
+  updateInfo();
+});
+
+createBoard();
+updateInfo();
